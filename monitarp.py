@@ -11,7 +11,6 @@
 
 
 # === Importing Dependencies === #
-from sys import path
 from socket import socket, AF_PACKET, SOCK_RAW, htons
 from time import time, sleep, strftime, gmtime
 from threading import Thread
