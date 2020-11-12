@@ -4,8 +4,7 @@
 
 
 ## How to use?
-Place the files inside the same directory.
-run `sudo python3 monitarp.py` to use the program with default options.
+Place the files inside the same directory and run `sudo python3 monitarp.py` to use the program with default options.
 
 
 
@@ -23,3 +22,4 @@ run `sudo python3 monitarp.py` to use the program with default options.
 * `-t/--timout` removes device from the screen when the timout exceeds and when `--log` is set it marks the device as `OFFLINE`. requires a `int`.
 * `-b/--blur` blurs data when using the GUI. requires a `string`.
 * `--nogui` does not display any information on the screen
+* `--debug` display running status of threads
