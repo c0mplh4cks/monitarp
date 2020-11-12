@@ -466,7 +466,7 @@ if __name__ == "__main__":
                 break
             if not analyse.running:
                 break
-            if args.stealth and not request.running:
+            if not args.stealth and not request.running:
                 break
             if args.output and not output.running:
                 break
