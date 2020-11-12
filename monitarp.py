@@ -406,7 +406,7 @@ class Display(Screen):
             opt = self.thread_on if log.running else self.thread_off
             self.write( " log     ", r=self.h-2, c=1, opt=opt)
 
-        cursor.move.position
+        cursor.move.position(self.h, 1)
 
 
 
