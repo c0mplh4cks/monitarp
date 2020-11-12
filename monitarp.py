@@ -15,6 +15,7 @@ from socket import socket, AF_PACKET, SOCK_RAW, htons
 from time import time, sleep, strftime, gmtime
 from threading import Thread
 from ipaddress import IPv4Network as ip_range
+from copy import deepcopy
 import argparse
 
 from packet import ARP, ETHERNET, maclookup
@@ -33,8 +34,7 @@ class Analyse(Thread):
 
         self.data = {}
 
-        self.running = True
-        self.error = ""
+        self.running = False
 
 
     def terminate(self):
@@ -42,9 +42,10 @@ class Analyse(Thread):
 
 
     def run(self):
+        self.running = True
         try:
             while self.running:
-                data = monitor.data.copy()
+                data = deepcopy(monitor.data)
                 data_new = data.copy()
 
                 if args.timeout:
@@ -53,12 +54,12 @@ class Analyse(Thread):
                         if last >= args.timeout:
                             data_new.pop(ip)
 
-                self.data = data_new.copy()
+                self.data = deepcopy(data_new)
                 sleep(0.2)
 
 
-        except Exception as err:
-            self.error = err
+        finally:
+            self.terminate()
 
 
 
@@ -73,8 +74,7 @@ class Log(Thread):
 
         self.data = {}
 
-        self.running = True
-        self.error = ""
+        self.running = False
 
 
     def terminate(self):
@@ -98,6 +98,7 @@ class Log(Thread):
 
 
     def run(self):
+        self.running = True
         try:
             with open(args.log, "w") as f:
                 f.write("#\tMONITARP  -  c0mplh4cks\n")
@@ -122,13 +123,13 @@ class Log(Thread):
                         f.write(f"{ strftime('%H:%M:%S') }\t{ mac }\tOFFLINE\t{ int(time()) }\n")
 
 
-                data_prev = data.copy()
+                data_prev = deepcopy(data)
 
                 sleep(1)
 
 
-        except Exception as err:
-            self.error = err
+        finally:
+            self.terminate()
 
 
 
@@ -141,8 +142,7 @@ class Output(Thread):
     def __init__(self):
         super().__init__()
 
-        self.running = True
-        self.error =""
+        self.running = False
 
 
     def terminate(self):
@@ -175,15 +175,16 @@ class Output(Thread):
 
 
     def run(self):
+        self.running = True
         try:
             while self.running:
                 self.outputfile()
 
-                sleep(5)
+                sleep(2)
 
 
-        except Exception as err:
-            self.error = err
+        finally:
+            self.terminate()
 
 
 
@@ -199,8 +200,7 @@ class Monitor(Thread):
         self.data = {}
         self.s = socket(AF_PACKET, SOCK_RAW, htons(0x0003))
 
-        self.running = True
-        self.error = ""
+        self.running = False
 
 
     def terminate(self):
@@ -227,6 +227,7 @@ class Monitor(Thread):
 
 
     def run(self):
+        self.running = True
         try:
             while self.running:
                 packet = self.s.recvfrom(2048)[0]
@@ -246,8 +247,8 @@ class Monitor(Thread):
                     self.data[ip]["last"] = time()
 
 
-        except Exception as err:
-            self.error = err
+        finally:
+            self.terminate()
 
 
 
@@ -265,8 +266,8 @@ class Request(Thread):
 
         self.pps = 0
         self.current = ""
-        self.running = True
-        self.error = ""
+
+        self.running = False
 
 
     def terminate(self):
@@ -274,6 +275,7 @@ class Request(Thread):
 
 
     def run(self):
+        self.running = True
         try:
             t = time()
             while self.running:
@@ -303,8 +305,8 @@ class Request(Thread):
                 if not args.repeat: break
 
 
-        except Exception as err:
-            self.error = err
+        finally:
+            self.terminate()
 
 
 
@@ -323,80 +325,88 @@ class Display(Screen):
         self.title = { "bg":(150,150,150), "fg":(50,50,50), "bold":1, "underline":1}
         self.info = { "bg": (50, 50, 50), "fg": (150, 150, 150) }
         self.warning = { "fg":(255,0,0), "bold":1 }
-
-        self.error = ""
+        self.thread_on = { "bg":(0,50,0), "fg":(0,200,0), "bold":1 }
+        self.thread_off = { "bg":(50,0,0), "fg":(200,0,0), "bold":1 }
 
 
     def update(self):
-        try:
-            self.terminalsize()
-            self.clear()
-            cursor.hide()
+        self.terminalsize()
+        self.clear()
+        cursor.hide()
 
-            data = analyse.data.copy()
+        data = analyse.data.copy()
 
-            self.write( " "*self.w, r=1, opt=self.head )
+        self.write( " "*self.w, r=1, opt=self.head )
 
-            self.write( "MONITARP  -  c0mplh4cks", r=1, c=2, opt=self.head )
+        self.write( "MONITARP  -  c0mplh4cks", r=1, c=2, opt=self.head )
 
-            if args.timeout:
-                self.write( "timeout", r=1, c=self.w-50, opt=self.mode)
-            if args.limit:
-                self.write( "limited", r=1, c=self.w-40, opt=self.mode)
-            if args.stealth:
-                self.write( "stealth", r=1, c=self.w-30, opt=self.mode)
+        if args.timeout:
+            self.write( "timeout", r=1, c=self.w-50, opt=self.mode)
+        if args.limit:
+            self.write( "limited", r=1, c=self.w-40, opt=self.mode)
+        if args.stealth:
+            self.write( "stealth", r=1, c=self.w-30, opt=self.mode)
+        if "ip" not in args.blur:
+            self.write( args.range, r=1, c=self.w-20, opt=self.head_italic)
+
+        c = 3
+        self.write( " IP ", r=4, c=c+1, opt=self.title )
+        self.write( " MAC ", r=4, c=c+24, opt=self.title )
+        self.write( " VENDOR ", r=4, c=c+48, opt=self.title )
+        self.write( " DYNAMIC ", r=4, c=c+92, opt=self.title )
+        if args.verbose:
+            self.write(" FIRST ", r=4, c=c+108, opt=self.title)
+            self.write(" LAST ", r=4, c=c+124, opt=self.title)
+
+        r = 6
+        for i, ip in enumerate(data):
+            if (r+i) > self.h-2: break
+
             if "ip" not in args.blur:
-                self.write( args.range, r=1, c=self.w-20, opt=self.head_italic)
-
-            c = 3
-            self.write( " IP ", r=4, c=c+1, opt=self.title )
-            self.write( " MAC ", r=4, c=c+24, opt=self.title )
-            self.write( " VENDOR ", r=4, c=c+48, opt=self.title )
-            self.write( " DYNAMIC ", r=4, c=c+92, opt=self.title )
+                self.write( ip, r=r+i, c=c+1, opt=self.info )
+            if "mac" not in args.blur:
+                self.write( data[ip]["mac"], r=r+i, c=c+24, opt=self.info )
+            if "vendor" not in args.blur:
+                self.write( data[ip]["vendor"], r=r+i, c=c+48, opt=self.info )
+            if "dynamic" not in args.blur:
+                self.write( data[ip]["dynamic"], r=r+i, c=c+92, opt=self.info )
             if args.verbose:
-                self.write(" FIRST ", r=4, c=c+108, opt=self.title)
-                self.write(" LAST ", r=4, c=c+124, opt=self.title)
+                if "first" not in args.blur:
+                    self.write( strftime("%H:%M:%S", gmtime(data[ip]["first"])), r=r+i, c=c+108, opt=self.info )
+                last = time() - data[ip]["last"]
+                if "last" not in args.blur:
+                    self.write( strftime("%M:%S", gmtime(last)), r=r+i, c=c+124, opt=self.info)
 
-            r = 6
-            for i, ip in enumerate(data):
-                if (r+i) > self.h-2: break
+        self.write( " "*self.w, r=self.h, opt=self.head )
 
-                if "ip" not in args.blur:
-                    self.write( ip, r=r+i, c=c+1, opt=self.info )
-                if "mac" not in args.blur:
-                    self.write( data[ip]["mac"], r=r+i, c=c+24, opt=self.info )
-                if "vendor" not in args.blur:
-                    self.write( data[ip]["vendor"], r=r+i, c=c+48, opt=self.info )
-                if "dynamic" not in args.blur:
-                    self.write( data[ip]["dynamic"], r=r+i, c=c+92, opt=self.info )
-                if args.verbose:
-                    if "first" not in args.blur:
-                        self.write( strftime("%H:%M:%S", gmtime(data[ip]["first"])), r=r+i, c=c+108, opt=self.info )
-                    last = time() - data[ip]["last"]
-                    if "last" not in args.blur:
-                        self.write( strftime("%M:%S", gmtime(last)), r=r+i, c=c+124, opt=self.info)
+        if args.verbose:
+            self.write( "device(s)", r=self.h, c=self.w-20, opt=self.head )
+            self.write( len(data), r=self.h, c=self.w-10, opt=self.head_italic )
 
-            self.write( " "*self.w, r=self.h, opt=self.head )
+            if not args.stealth:
+                self.write( "pckts/s", r=self.h, c=self.w-36, opt=self.head )
+                self.write( request.pps, r=self.h, c=self.w-28, opt=self.head_italic )
 
-            if args.verbose:
-                self.write( "device(s)", r=self.h, c=self.w-20, opt=self.head )
-                self.write( len(data), r=self.h, c=self.w-10, opt=self.head_italic )
+            if "ip" not in args.blur:
+                self.write( request.current, r=self.h, c=self.w-52, opt=self.head_italic)
+            if "mac" not in args.blur:
+                self.write( args.mac, r=self.h, c=2, opt=self.head_italic)
+            if "interface" not in args.blur:
+                self.write( args.interface, r=self.h, c=23, opt=self.head_italic)
 
-                if not args.stealth:
-                    self.write( "pckts/s", r=self.h, c=self.w-36, opt=self.head )
-                    self.write( request.pps, r=self.h, c=self.w-28, opt=self.head_italic )
+        if args.debug:
+            opt = self.thread_on if monitor.running else self.thread_off
+            self.write( " monitor ", r=self.h-6, c=1, opt=opt)
+            opt = self.thread_on if analyse.running else self.thread_off
+            self.write( " analyse ", r=self.h-5, c=1, opt=opt)
+            opt = self.thread_on if request.running else self.thread_off
+            self.write( " request ", r=self.h-4, c=1, opt=opt)
+            opt = self.thread_on if output.running else self.thread_off
+            self.write( " output  ", r=self.h-3, c=1, opt=opt)
+            opt = self.thread_on if log.running else self.thread_off
+            self.write( " log     ", r=self.h-2, c=1, opt=opt)
 
-                if "ip" not in args.blur:
-                    self.write( request.current, r=self.h, c=self.w-52, opt=self.head_italic)
-                if "mac" not in args.blur:
-                    self.write( args.mac, r=self.h, c=2, opt=self.head_italic)
-                if "interface" not in args.blur:
-                    self.write( args.interface, r=self.h, c=23, opt=self.head_italic)
-
-
-        except Exception as err:
-            self.error = err
-
+        cursor.move.position
 
 
 
@@ -422,14 +432,13 @@ if __name__ == "__main__":
     parser.add_argument( "-t", "--timeout", help="remove from gui when timeout", default=0, type=int)
     parser.add_argument( "-b", "--blur", help="blur data", action="append" )
     parser.add_argument( "--nogui", help="no graphical user interface", action="store_true" )
+    parser.add_argument( "--debug", help="display thread status", action="store_true" )
 
     args = parser.parse_args()
 
     if args.blur == None:
         args.blur = []
 
-
-    error = ""
 
     monitor = Monitor()
     request = Request()
@@ -451,23 +460,18 @@ if __name__ == "__main__":
 
     try:
         cursor.hide()
-        if not args.nogui: print( text(" MONITARP  -  c0mplh4cks ", **display.head, blink=1) )
-        sleep(2)
 
-        while not error:
-            if monitor.error:
-                error = f"Error in Monitor:\n { str(monitor.error) }"
-            if request.error:
-                error = f"Error in Request:\n { str(request.error) }"
-            if display.error:
-                error = f"Error in Display:\n { str(display.error) }"
-            if analyse.error:
-                error = f"Error in Analyse:\n { str(analyse.error) }"
-            if output.error:
-                error = f"Error in Output:\n { str(log.error) }"
-            if log.error:
-                error = f"Error in Log:\n { str(log.error) }"
-
+        while True:
+            if not monitor.running:
+                break
+            if not analyse.running:
+                break
+            if args.stealth and not request.running:
+                break
+            if args.output and not output.running:
+                break
+            if args.log and not log.running:
+                break
 
             if not args.nogui:
                 display.update()
@@ -475,7 +479,7 @@ if __name__ == "__main__":
 
 
     except KeyboardInterrupt:
-        error = "Executed user's request to kill the program..."
+        pass
 
 
     finally:
@@ -491,7 +495,4 @@ if __name__ == "__main__":
             output.outputfile()
             print( text(" output written to file...", **display.warning) )
 
-
-        print()
-        print( f" {text(str(error), **display.warning)}\n " )
-        print()
+        print("\n\n\n")
