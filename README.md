@@ -1,12 +1,6 @@
 # Monitarp
 ### a Network Device Detection Tool using the Address Resolution Protocol
 
-## Requirements
-* Python 3 (tested in Python 3.8.6)
-* Root Acces (tested on Kali Linux)
-* The following Python Library's: socket, time, threading, ipaddress, argparse, os, random, struct
-
-
 
 
 ## How to use?
