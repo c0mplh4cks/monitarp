@@ -18,8 +18,8 @@ from ipaddress import IPv4Network as ip_range
 from copy import deepcopy
 import argparse
 
-from packet import ARP, ETHERNET, maclookup
-from screem import Screen, cursor, text
+from c0mplh4cks.packnet import ARP, ETHERNET, maclookup
+from c0mplh4cks.screem import Screen, cursor, decorate
 
 
 
@@ -336,75 +336,75 @@ class Display(Screen):
 
         data = analyse.data.copy()
 
-        self.write( " "*self.w, r=1, opt=self.head )
+        self.write( " "*self.w, r=1, dec=self.head )
 
-        self.write( "MONITARP  -  c0mplh4cks", r=1, c=2, opt=self.head )
+        self.write( "MONITARP  -  c0mplh4cks", r=1, c=2, dec=self.head )
 
         if args.timeout:
-            self.write( "timeout", r=1, c=self.w-50, opt=self.mode)
+            self.write( "timeout", r=1, c=self.w-50, dec=self.mode)
         if args.limit:
-            self.write( "limited", r=1, c=self.w-40, opt=self.mode)
+            self.write( "limited", r=1, c=self.w-40, dec=self.mode)
         if args.stealth:
-            self.write( "stealth", r=1, c=self.w-30, opt=self.mode)
+            self.write( "stealth", r=1, c=self.w-30, dec=self.mode)
         if "ip" not in args.blur:
-            self.write( args.range, r=1, c=self.w-20, opt=self.head_italic)
+            self.write( args.range, r=1, c=self.w-20, dec=self.head_italic)
 
         c = 3
-        self.write( " IP ", r=4, c=c+1, opt=self.title )
-        self.write( " MAC ", r=4, c=c+24, opt=self.title )
-        self.write( " VENDOR ", r=4, c=c+48, opt=self.title )
-        self.write( " DYNAMIC ", r=4, c=c+92, opt=self.title )
+        self.write( " IP ", r=4, c=c+1, dec=self.title )
+        self.write( " MAC ", r=4, c=c+24, dec=self.title )
+        self.write( " VENDOR ", r=4, c=c+48, dec=self.title )
+        self.write( " DYNAMIC ", r=4, c=c+92, dec=self.title )
         if args.verbose:
-            self.write(" FIRST ", r=4, c=c+108, opt=self.title)
-            self.write(" LAST ", r=4, c=c+124, opt=self.title)
+            self.write(" FIRST ", r=4, c=c+108, dec=self.title)
+            self.write(" LAST ", r=4, c=c+124, dec=self.title)
 
         r = 6
         for i, ip in enumerate(data):
             if (r+i) > self.h-2: break
 
             if "ip" not in args.blur:
-                self.write( ip, r=r+i, c=c+1, opt=self.info )
+                self.write( ip, r=r+i, c=c+1, dec=self.info )
             if "mac" not in args.blur:
-                self.write( data[ip]["mac"], r=r+i, c=c+24, opt=self.info )
+                self.write( data[ip]["mac"], r=r+i, c=c+24, dec=self.info )
             if "vendor" not in args.blur:
-                self.write( data[ip]["vendor"], r=r+i, c=c+48, opt=self.info )
+                self.write( data[ip]["vendor"], r=r+i, c=c+48, dec=self.info )
             if "dynamic" not in args.blur:
-                self.write( data[ip]["dynamic"], r=r+i, c=c+92, opt=self.info )
+                self.write( data[ip]["dynamic"], r=r+i, c=c+92, dec=self.info )
             if args.verbose:
                 if "first" not in args.blur:
-                    self.write( strftime("%H:%M:%S", gmtime(data[ip]["first"])), r=r+i, c=c+108, opt=self.info )
+                    self.write( strftime("%H:%M:%S", gmtime(data[ip]["first"])), r=r+i, c=c+108, dec=self.info )
                 last = time() - data[ip]["last"]
                 if "last" not in args.blur:
-                    self.write( strftime("%M:%S", gmtime(last)), r=r+i, c=c+124, opt=self.info)
+                    self.write( strftime("%M:%S", gmtime(last)), r=r+i, c=c+124, dec=self.info)
 
-        self.write( " "*self.w, r=self.h, opt=self.head )
+        self.write( " "*self.w, r=self.h, dec=self.head )
 
         if args.verbose:
-            self.write( "device(s)", r=self.h, c=self.w-20, opt=self.head )
-            self.write( len(data), r=self.h, c=self.w-10, opt=self.head_italic )
+            self.write( "device(s)", r=self.h, c=self.w-20, dec=self.head )
+            self.write( len(data), r=self.h, c=self.w-10, dec=self.head_italic )
 
             if not args.stealth:
-                self.write( "pckts/s", r=self.h, c=self.w-36, opt=self.head )
-                self.write( request.pps, r=self.h, c=self.w-28, opt=self.head_italic )
+                self.write( "pckts/s", r=self.h, c=self.w-36, dec=self.head )
+                self.write( request.pps, r=self.h, c=self.w-28, dec=self.head_italic )
 
             if "ip" not in args.blur:
-                self.write( request.current, r=self.h, c=self.w-52, opt=self.head_italic)
+                self.write( request.current, r=self.h, c=self.w-52, dec=self.head_italic)
             if "mac" not in args.blur:
-                self.write( args.mac, r=self.h, c=2, opt=self.head_italic)
+                self.write( args.mac, r=self.h, c=2, dec=self.head_italic)
             if "interface" not in args.blur:
-                self.write( args.interface, r=self.h, c=23, opt=self.head_italic)
+                self.write( args.interface, r=self.h, c=23, dec=self.head_italic)
 
         if args.debug:
-            opt = self.thread_on if monitor.running else self.thread_off
-            self.write( " monitor ", r=self.h-6, c=1, opt=opt)
-            opt = self.thread_on if analyse.running else self.thread_off
-            self.write( " analyse ", r=self.h-5, c=1, opt=opt)
-            opt = self.thread_on if request.running else self.thread_off
-            self.write( " request ", r=self.h-4, c=1, opt=opt)
-            opt = self.thread_on if output.running else self.thread_off
-            self.write( " output  ", r=self.h-3, c=1, opt=opt)
-            opt = self.thread_on if log.running else self.thread_off
-            self.write( " log     ", r=self.h-2, c=1, opt=opt)
+            dec = self.thread_on if monitor.running else self.thread_off
+            self.write( " monitor ", r=self.h-6, c=1, dec=dec)
+            dec = self.thread_on if analyse.running else self.thread_off
+            self.write( " analyse ", r=self.h-5, c=1, dec=dec)
+            dec = self.thread_on if request.running else self.thread_off
+            self.write( " request ", r=self.h-4, c=1, dec=dec)
+            dec = self.thread_on if output.running else self.thread_off
+            self.write( " output  ", r=self.h-3, c=1, dec=dec)
+            dec = self.thread_on if log.running else self.thread_off
+            self.write( " log     ", r=self.h-2, c=1, dec=dec)
 
         cursor.move.position(self.h, 1)
 
@@ -493,6 +493,6 @@ if __name__ == "__main__":
 
         if args.output:
             output.outputfile()
-            print( text(" output written to file...", **display.warning) )
+            print( decorate(" output written to file...", **display.warning) )
 
         print("\n\n\n")
